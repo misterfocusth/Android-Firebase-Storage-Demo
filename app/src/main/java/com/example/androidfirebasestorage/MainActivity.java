@@ -4,7 +4,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -118,6 +121,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 public void onFailure(@NonNull Exception e) {
                     // Show Error Toast Notification
                     makeErrorToast(MainActivity.this , "Your Image Was Upload UnSuccessful Please Try Again !");
+                    makeErrorAlertDialog(MainActivity.this);
                 }
             }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                 @Override
@@ -129,6 +133,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         @Override
                         public void onComplete(@NonNull Task<Uri> task) {
                             edtTmageDownloadLink.setText(task.getResult().toString());
+                            makeSuccessAlertDialog(MainActivity.this);
                         }
                     });
                 }
@@ -192,11 +197,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         FancyToast.makeText(context ,text ,FancyToast.LENGTH_LONG , FancyToast.INFO ,false).show();
     }
 
-    private void makeErrorToast(Context context , String text) {
+    private void makeErrorToast(Context context , String text) { // Call This Method To Show Error Toast
         FancyToast.makeText(context , text , Toast.LENGTH_LONG , FancyToast.ERROR , false).show();
     }
 
-    private void makeSuccessToast(Context context , String text) {
+    private void makeSuccessToast(Context context , String text) { // Call This Method To Show Success Toast
         FancyToast.makeText(context , text , Toast.LENGTH_LONG , FancyToast.SUCCESS , false).show();
     }
 
@@ -208,6 +213,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         String uriToString = getContentResolver().getType(uri);
         uriToString = uriToString.substring(uriToString.lastIndexOf("/") + 1);
         return uriToString;
+    }
+
+    private void makeSuccessAlertDialog(Context context) { // Call This Method To Show Success Dialog
+        AlertDialog dialog = new AlertDialog.Builder(context).create();
+        dialog.setTitle("Your Image Upload Is Successfully !");
+        dialog.setMessage("Click View To View Your Uploaded Image In Browser");
+        dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Dismiss", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "View", new DialogInterface.OnClickListener() { // Open Uploaded Image On Browser
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(edtTmageDownloadLink.getText().toString()));
+                startActivity(intent);
+            }
+        });
+        dialog.show();
+    }
+
+    private void makeErrorAlertDialog(Context context) {
+        AlertDialog dialog = new AlertDialog.Builder(context).create();
+        dialog.setTitle("Error To Upload Your Image !");
+        dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Dismiss" , new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        dialog.show();
     }
 
 }
