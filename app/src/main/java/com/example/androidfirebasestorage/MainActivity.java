@@ -64,6 +64,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         btnUpload = findViewById(R.id.btnUpload);
         btnUpload.setOnClickListener(MainActivity.this);
+        btnUpload.setClickable(false); // if Image Is Not Selected Not Allow User To Press Upload Button
 
         edtImageName = findViewById(R.id.edtImageName);
         edtImageName.setText("Please Select Your Target Image First !");
@@ -180,6 +181,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 mImageView.setImageBitmap(selectedImage); // Set Selected Image On ImageView
                 edtImageName.setText(mSelectedImageName + "." + ImageExtension); // Set Current Image Name Appere To User
                 textUUIDImageName.setClickable(true); // Allow User Can Click After Selected Image
+                btnUpload.setClickable(true); // Allow User Can Click After Selected Image
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
