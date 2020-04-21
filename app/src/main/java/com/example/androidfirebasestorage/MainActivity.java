@@ -169,7 +169,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // If Upload Local File
                 if (!mImageView.isClickable() && btnSelectLocalFile.isClickable()) {
                     Log.i("btn Upload : " , "Upload File");
-                    StorageReference fileRef = mStorageRef.child("Local_File/" + selectedFileUri.getLastPathSegment());
+                    StorageReference fileRef = mStorageRef.child("Local_File/" + edtFileName.getText().toString());
                     StorageMetadata fileMetaData = new StorageMetadata.Builder() // Get Image / File Meta Data If It Have or Your Want !
                             .setContentType("*/*")
                             .build();
