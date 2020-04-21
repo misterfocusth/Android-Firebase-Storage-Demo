@@ -43,7 +43,9 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
-    private static final int RESULT_LOAD_IMG = 1000;
+    private static final int RESULT_LOAD_IMG = 1000; // Upload Image
+    private static final int RESULT_SELECT_LOCAL_FILE = 2000; // Upload Local File
+
 
     ImageView mImageView;
     Button btnUpload;
@@ -115,40 +117,44 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     .setContentType("image/jpg")
                     .build();
 
-            UploadTask uploadTask = imageRef.putBytes(data , metaData);
-            uploadTask.addOnFailureListener(new OnFailureListener() {
-                @Override
-                public void onFailure(@NonNull Exception e) {
-                    // Show Error Toast Notification
-                    makeErrorToast(MainActivity.this , "Your Image Was Upload UnSuccessful Please Try Again !");
-                    makeErrorAlertDialog(MainActivity.this);
-                }
-            }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                @Override
-                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                    // Show Success Toast Notification
-                    makeSuccessToast(MainActivity.this , "Your Image Upload Was Successful !");
-                    // Update Download Uri To User
-                    taskSnapshot.getMetadata().getReference().getDownloadUrl().addOnCompleteListener(new OnCompleteListener<Uri>() {
-                        @Override
-                        public void onComplete(@NonNull Task<Uri> task) {
-                            edtTmageDownloadLink.setText(task.getResult().toString());
-                            makeSuccessAlertDialog(MainActivity.this);
-                        }
-                    });
-                }
-            }).addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
-                @Override
-                public void onProgress(@NonNull UploadTask.TaskSnapshot taskSnapshot) {
-                    double progress = (100 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
-                    mProgressBar.setProgress((int) progress);
-                }
-            }).addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
-                @Override
-                public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
-                    // On Complete
-                }
-            });
+            if (NetworkInfo.getNetworkStatus(MainActivity.this) == 1 && NetworkInfo.getNetworkStatus(MainActivity.this) == 2) { // Check User Network Connection
+                UploadTask uploadTask = imageRef.putBytes(data , metaData);
+                uploadTask.addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        // Show Error Toast Notification
+                        makeErrorToast(MainActivity.this , "Your Image Was Upload UnSuccessful Please Try Again !");
+                        makeErrorAlertDialog(MainActivity.this);
+                    }
+                }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                    @Override
+                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                        // Show Success Toast Notification
+                        makeSuccessToast(MainActivity.this , "Your Image Upload Was Successful !");
+                        // Update Download Uri To User
+                        taskSnapshot.getMetadata().getReference().getDownloadUrl().addOnCompleteListener(new OnCompleteListener<Uri>() {
+                            @Override
+                            public void onComplete(@NonNull Task<Uri> task) {
+                                edtTmageDownloadLink.setText(task.getResult().toString());
+                                makeSuccessAlertDialog(MainActivity.this);
+                            }
+                        });
+                    }
+                }).addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
+                    @Override
+                    public void onProgress(@NonNull UploadTask.TaskSnapshot taskSnapshot) {
+                        double progress = (100 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
+                        mProgressBar.setProgress((int) progress);
+                    }
+                }).addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
+                        // On Complete
+                    }
+                });
+            } else { // Make Error Toast Notification If User No Internet Connection
+                makeErrorToast(MainActivity.this , "Upload Cancelled Your Don't Have Network Connection");
+            }
 
         }
 
@@ -174,7 +180,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (resultCode == RESULT_OK || data != null) { // Get Selected Image And Show On ImageView || Update TextView Image Name
+        if (requestCode == RESULT_LOAD_IMG && resultCode == RESULT_OK && data != null) { // Get Selected Image And Show On ImageView || Update TextView Image Name
             try {
                 final Uri imageUri = data.getData();
                 final InputStream imageStream = getContentResolver().openInputStream(imageUri);
@@ -190,6 +196,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
+        }
+
+        if (requestCode == RESULT_SELECT_LOCAL_FILE && requestCode == RESULT_OK && data != null) {
+
         }
     }
 
