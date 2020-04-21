@@ -14,6 +14,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -46,10 +47,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static final int RESULT_SELECT_LOCAL_FILE = 2000; // Upload Local File
     private static final int EXTERNAL_STORAGE_PERMISSION_REQUEST_CODE = 2100 ;
 
+    private Uri selectedFileUri;
+
 
     ImageView mImageView;
     Button btnUpload , btnSelectLocalFile;
-    EditText edtFileName, edtTmageDownloadLink;
+    EditText edtFileName, edtFileDownloadLink;
     TextView textUploading , textUUIDFileName;
     ProgressBar mProgressBar;
 
@@ -77,7 +80,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         edtFileName = findViewById(R.id.edtImageName);
         edtFileName.setText("Please Select Your Target Image First !");
 
-        edtTmageDownloadLink = findViewById(R.id.edtImageDownloadLink);
+        edtFileDownloadLink = findViewById(R.id.edtImageDownloadLink);
 
         textUploading = findViewById(R.id.textView3);
         textUUIDFileName = findViewById(R.id.textUUIDImageName);
@@ -107,58 +110,101 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             textUploading.setVisibility(View.VISIBLE);
             mProgressBar.setVisibility(View.VISIBLE);
 
-            // Upload Photo Form ImageView To Firebase Storage
-            mImageView.setDrawingCacheEnabled(true);
-            mImageView.buildDrawingCache();
-            Bitmap bitmap = ((BitmapDrawable) mImageView.getDrawable()).getBitmap();
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.JPEG , 100 , outputStream);
-            byte[] data = outputStream.toByteArray();
+            // If Upload Image
+            if (mImageView.isClickable() && !btnSelectLocalFile.isClickable()) {
+                Log.i("btn Upload : " , "Upload Image");
+                // Upload Photo Form ImageView To Firebase Storage
+                mImageView.setDrawingCacheEnabled(true);
+                mImageView.buildDrawingCache();
+                Bitmap bitmap = ((BitmapDrawable) mImageView.getDrawable()).getBitmap();
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG , 100 , outputStream);
+                byte[] data = outputStream.toByteArray();
 
-            final StorageReference imageRef = mStorageRef.child(edtFileName.getText().toString()); // Create Firebase Storage Ref. To Upload To It.
-            StorageMetadata metaData = new StorageMetadata.Builder() // Get Image / File Meta Data If It Have or Your Want !
-                    .setContentType("image/jpg")
-                    .build();
+                final StorageReference imageRef = mStorageRef.child(edtFileName.getText().toString()); // Create Firebase Storage Ref. To Upload To It.
+                StorageMetadata imageMetaData = new StorageMetadata.Builder() // Get Image / File Meta Data If It Have or Your Want !
+                        .setContentType("image/jpg")
+                        .build();
 
-            if (NetworkInfo.getNetworkStatus(MainActivity.this) == 1 && NetworkInfo.getNetworkStatus(MainActivity.this) == 2) { // Check User Network Connection
-                UploadTask uploadTask = imageRef.putBytes(data , metaData);
-                uploadTask.addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        // Show Error Toast Notification
-                        makeErrorToast(MainActivity.this , "Your Image Was Upload UnSuccessful Please Try Again !");
-                        makeErrorAlertDialog(MainActivity.this);
-                    }
-                }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                    @Override
-                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                        // Show Success Toast Notification
-                        makeSuccessToast(MainActivity.this , "Your Image Upload Was Successful !");
-                        // Update Download Uri To User
-                        taskSnapshot.getMetadata().getReference().getDownloadUrl().addOnCompleteListener(new OnCompleteListener<Uri>() {
-                            @Override
-                            public void onComplete(@NonNull Task<Uri> task) {
-                                edtTmageDownloadLink.setText(task.getResult().toString());
-                                makeSuccessAlertDialog(MainActivity.this);
-                            }
-                        });
-                    }
-                }).addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
-                    @Override
-                    public void onProgress(@NonNull UploadTask.TaskSnapshot taskSnapshot) {
-                        double progress = (100 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
-                        mProgressBar.setProgress((int) progress);
-                    }
-                }).addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
-                    @Override
-                    public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
-                        // On Complete
-                    }
-                });
-            } else { // Make Error Toast Notification If User No Internet Connection
-                makeErrorToast(MainActivity.this , "Upload Cancelled Your Don't Have Network Connection");
+                if (NetworkInfo.getNetworkStatus(MainActivity.this) == 1 && NetworkInfo.getNetworkStatus(MainActivity.this) == 2) { // Check User Network Connection
+                    UploadTask uploadTask = imageRef.putBytes(data , imageMetaData);
+                    uploadTask.addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            // Show Error Toast Notification
+                            makeErrorToast(MainActivity.this , "Your Image Was Upload UnSuccessful Please Try Again !");
+                            makeErrorAlertDialog(MainActivity.this);
+                        }
+                    }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                            // Show Success Toast Notification
+                            makeSuccessToast(MainActivity.this , "Your Image Upload Was Successful !");
+                            // Update Download Uri To User
+                            taskSnapshot.getMetadata().getReference().getDownloadUrl().addOnCompleteListener(new OnCompleteListener<Uri>() {
+                                @Override
+                                public void onComplete(@NonNull Task<Uri> task) {
+                                    edtFileDownloadLink.setText(task.getResult().toString());
+                                    makeSuccessAlertDialog(MainActivity.this);
+                                }
+                            });
+                        }
+                    }).addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onProgress(@NonNull UploadTask.TaskSnapshot taskSnapshot) {
+                            double progress = (100 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
+                            mProgressBar.setProgress((int) progress);
+                        }
+                    }).addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
+                            // On Complete
+                        }
+                    });
+                } else { // Make Error Toast Notification If User No Internet Connection
+                    makeErrorToast(MainActivity.this , "Upload Cancelled Your Don't Have Network Connection");
+                }
             }
 
+                // If Upload Local File
+                if (!mImageView.isClickable() && btnSelectLocalFile.isClickable()) {
+                    Log.i("btn Upload : " , "Upload File");
+                    StorageReference fileRef = mStorageRef.child("Local_File/" + selectedFileUri.getLastPathSegment());
+                    StorageMetadata fileMetaData = new StorageMetadata.Builder() // Get Image / File Meta Data If It Have or Your Want !
+                            .setContentType("*/*")
+                            .build();
+                    UploadTask uploadTask = fileRef.putFile(selectedFileUri, fileMetaData);
+                    uploadTask.addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            // Show Error Toast Notification
+                            makeErrorToast(MainActivity.this , "Your File Was Upload UnSuccessful Please Try Again !");
+                            makeErrorAlertDialog(MainActivity.this);
+                        }
+                    }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                            // Show Success Toast Notification
+                            makeSuccessToast(MainActivity.this , "Your File Upload Was Successful !");
+                            // Update Download Uri To User
+                            taskSnapshot.getMetadata().getReference().getDownloadUrl().addOnCompleteListener(new OnCompleteListener<Uri>() {
+                                @Override
+                                public void onComplete(@NonNull Task<Uri> task) {
+                                    edtFileDownloadLink.setText(task.getResult().toString());
+                                    makeSuccessAlertDialog(MainActivity.this);
+                                }
+                            });
+                        }
+                    }).addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onProgress(@NonNull UploadTask.TaskSnapshot taskSnapshot) {
+                            double progress = (100 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
+                            mProgressBar.setProgress((int) progress);
+                        }
+                    });
+                } else { // Make Error Toast Notification If User No Internet Connection
+                    makeErrorToast(MainActivity.this , "Upload Cancelled Your Don't Have Network Connection");
+                }
         }
 
         if (v.getId() == R.id.btnSelectLocalFile) {
@@ -217,7 +263,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         if (requestCode == RESULT_SELECT_LOCAL_FILE && resultCode == RESULT_OK && data != null) {
             makeInfoToast(MainActivity.this , "Your Local File Is Selected !");
-            Uri selectedFileUri = data.getData();
+            selectedFileUri = data.getData();
             File file = new File(selectedFileUri.getPath());
             edtFileName.setText(file.getName()); // Set Selected File Name On Edittext
             btnSelectLocalFile.setText("File : " + edtFileName.getText().toString()); // Set Selected Local File Name On Button
@@ -251,8 +297,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void makeSuccessAlertDialog(Context context) { // Call This Method To Show Success Dialog
         AlertDialog dialog = new AlertDialog.Builder(context).create();
-        dialog.setTitle("Your Image Upload Is Successfully !");
-        dialog.setMessage("Click View To View Your Uploaded Image In Browser");
+        dialog.setTitle("Your Image / File Upload Is Successfully !");
+        dialog.setMessage("Click View To View Your Uploaded Image / File In Browser");
         dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Dismiss", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -263,7 +309,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setData(Uri.parse(edtTmageDownloadLink.getText().toString()));
+                intent.setData(Uri.parse(edtFileDownloadLink.getText().toString()));
                 startActivity(intent);
             }
         });
@@ -272,7 +318,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void makeErrorAlertDialog(Context context) {
         AlertDialog dialog = new AlertDialog.Builder(context).create();
-        dialog.setTitle("Error To Upload Your Image !");
+        dialog.setTitle("Error To Upload Your Image / File !");
         dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Dismiss" , new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
