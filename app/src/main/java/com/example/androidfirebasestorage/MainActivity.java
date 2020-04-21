@@ -4,8 +4,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.Manifest;
 import android.app.AlertDialog;
-import android.app.AlertDialog.Builder;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -14,7 +14,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -23,7 +22,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.auth.api.signin.internal.Storage;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -38,19 +36,21 @@ import com.shashank.sony.fancytoastlib.FancyToast;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
-import java.net.URL;
 import java.util.UUID;
+
+import pub.devrel.easypermissions.EasyPermissions;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static final int RESULT_LOAD_IMG = 1000; // Upload Image
     private static final int RESULT_SELECT_LOCAL_FILE = 2000; // Upload Local File
+    private static final int EXTERNAL_STORAGE_PERMISSION_REQUEST_CODE = 2100 ;
 
 
     ImageView mImageView;
-    Button btnUpload;
-    EditText edtImageName , edtTmageDownloadLink;
-    TextView textUploading , textUUIDImageName;
+    Button btnUpload , btnSelectLocalFile;
+    EditText edtFileName, edtTmageDownloadLink;
+    TextView textUploading , textUUIDFileName;
     ProgressBar mProgressBar;
 
     private String ImageExtension , mSelectedImageName;
@@ -71,20 +71,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         btnUpload.setOnClickListener(MainActivity.this);
         btnUpload.setClickable(false); // if Image Is Not Selected Not Allow User To Press Upload Button
 
-        edtImageName = findViewById(R.id.edtImageName);
-        edtImageName.setText("Please Select Your Target Image First !");
+        btnSelectLocalFile = findViewById(R.id.btnSelectLocalFile);
+        btnSelectLocalFile.setOnClickListener(MainActivity.this);
+
+        edtFileName = findViewById(R.id.edtImageName);
+        edtFileName.setText("Please Select Your Target Image First !");
 
         edtTmageDownloadLink = findViewById(R.id.edtImageDownloadLink);
 
         textUploading = findViewById(R.id.textView3);
-        textUUIDImageName = findViewById(R.id.textUUIDImageName);
-        textUUIDImageName.setOnClickListener(MainActivity.this);
-        textUUIDImageName.setClickable(false);
+        textUUIDFileName = findViewById(R.id.textUUIDImageName);
+        textUUIDFileName.setOnClickListener(MainActivity.this);
+        textUUIDFileName.setClickable(false);
 
 
         mProgressBar = findViewById(R.id.progressBar);
 
-        makeInfoToast(MainActivity.this , "Click On ImageView To Select Target Image First !");
+        makeInfoToast(MainActivity.this , "Please Select Image or File First !");
 
         // Firebase Storage Ref.
         mStorageRef = FirebaseStorage.getInstance().getReference();
@@ -112,7 +115,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             bitmap.compress(Bitmap.CompressFormat.JPEG , 100 , outputStream);
             byte[] data = outputStream.toByteArray();
 
-            final StorageReference imageRef = mStorageRef.child(edtImageName.getText().toString()); // Create Firebase Storage Ref. To Upload To It.
+            final StorageReference imageRef = mStorageRef.child(edtFileName.getText().toString()); // Create Firebase Storage Ref. To Upload To It.
             StorageMetadata metaData = new StorageMetadata.Builder() // Get Image / File Meta Data If It Have or Your Want !
                     .setContentType("image/jpg")
                     .build();
@@ -158,8 +161,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         }
 
+        if (v.getId() == R.id.btnSelectLocalFile) {
+            // Check User Permission Before Access Storage
+            if (!EasyPermissions.hasPermissions(MainActivity.this , Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                EasyPermissions.requestPermissions(this, getString(R.string.permission_read_external_storage),
+                        EXTERNAL_STORAGE_PERMISSION_REQUEST_CODE, Manifest.permission.READ_EXTERNAL_STORAGE);
+            }
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("*/*");
+            intent = Intent.createChooser(intent , "Select Your File To Upload");
+            startActivityForResult(intent , RESULT_SELECT_LOCAL_FILE);
+        }
+
         if (v.getId() == R.id.textUUIDImageName) {
-            edtImageName.setText(generateUUID() + "." + ImageExtension);
+            edtFileName.setText(generateUUID() + "." + ImageExtension);
         }
 
     }
@@ -181,6 +196,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == RESULT_LOAD_IMG && resultCode == RESULT_OK && data != null) { // Get Selected Image And Show On ImageView || Update TextView Image Name
+            makeInfoToast(MainActivity.this , "Your Image Is Selected !");
             try {
                 final Uri imageUri = data.getData();
                 final InputStream imageStream = getContentResolver().openInputStream(imageUri);
@@ -190,16 +206,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 ImageExtension = getContentResolver().getType(imageUri);
                 ImageExtension = ImageExtension.substring(ImageExtension.lastIndexOf("/") + 1); // SubString File Ext. Only . MIME Type
                 mImageView.setImageBitmap(selectedImage); // Set Selected Image On ImageView
-                edtImageName.setText(mSelectedImageName + "." + ImageExtension); // Set Current Image Name Appere To User
-                textUUIDImageName.setClickable(true); // Allow User Can Click After Selected Image
+                edtFileName.setText(mSelectedImageName + "." + ImageExtension); // Set Current Image Name Appere To User
+                btnSelectLocalFile.setClickable(false); // Not Allow User To Select File When Selected Photo
+                textUUIDFileName.setClickable(true); // Allow User Can Click After Selected Image
                 btnUpload.setClickable(true); // Allow User Can Click After Selected Image
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
         }
 
-        if (requestCode == RESULT_SELECT_LOCAL_FILE && requestCode == RESULT_OK && data != null) {
-
+        if (requestCode == RESULT_SELECT_LOCAL_FILE && resultCode == RESULT_OK && data != null) {
+            makeInfoToast(MainActivity.this , "Your Local File Is Selected !");
+            Uri selectedFileUri = data.getData();
+            File file = new File(selectedFileUri.getPath());
+            edtFileName.setText(file.getName()); // Set Selected File Name On Edittext
+            btnSelectLocalFile.setText("File : " + edtFileName.getText().toString()); // Set Selected Local File Name On Button
+            mImageView.setClickable(false); // Not Allow User To Select Photo When Selected File
+            textUUIDFileName.setClickable(true); // Allow User Can Click After Selected Image
+            btnUpload.setClickable(true); // Allow User Can Click After Selected Image
         }
     }
 
@@ -219,7 +243,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return UUID.randomUUID().toString();
     }
 
-    private String getImageExtension(Uri uri) { // Not Use In This Project But Create For Example Propuse
+    private String getFileExtension(Uri uri) { // Not Use In This Project But Create For Example Propuse
         String uriToString = getContentResolver().getType(uri);
         uriToString = uriToString.substring(uriToString.lastIndexOf("/") + 1);
         return uriToString;

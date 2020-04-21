@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Android Firebase Storage</string>
+    <string name="permission_read_external_storage" />
 </resources>

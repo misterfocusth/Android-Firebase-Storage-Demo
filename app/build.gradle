@@ -35,9 +35,9 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
     implementation 'com.google.android.material:material:1.1.0'
 
-    // RoundCornerProgressBar - ProgressBar Library
-    implementation 'com.akexorcist:round-corner-progress-bar:2.1.0'
-
     // FancyToast - Toast Notification Library
     implementation 'com.github.Shashank02051997:FancyToast-Android:0.1.6'
+
+    // Easy Permission Library
+    implementation 'pub.devrel:easypermissions:0.2.0'
 }
